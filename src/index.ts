@@ -1,7 +1,6 @@
 import axios from 'axios';
 import { program } from 'commander';
 import * as fs from 'fs/promises';
-import * as path from 'path';
 import { parseString } from 'xml2js';
 import { promisify } from 'util';
 import { createLogger, format, transports } from 'winston';
