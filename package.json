@@ -4,12 +4,12 @@
     "description": "An IndexNow Submission module with caching and analytics",
     "repository": {
         "type": "git",
-        "url": "https://github.com/viv1/indexnow-submitter.git"
+        "url": "git+https://github.com/viv1/indexnow-submitter.git"
     },
     "homepage": "https://github.com/viv1/indexnow-submitter",
     "main": "dist/index.js",
     "bin": {
-        "indexnow-submitter": "./dist/index.js"
+        "indexnow-submitter": "dist/index.js"
     },
     "types": "dist/index.d.ts",
     "scripts": {
