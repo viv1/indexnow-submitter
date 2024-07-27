@@ -88,6 +88,8 @@ class IndexNowSubmitter {
       urlList: urls
     };
 
+    logger.info(`Submitting urls: ${urls}`);
+
     try {
       const startTime = Date.now();
       const response = await axios.post(endpoint, payload);
@@ -95,7 +97,8 @@ class IndexNowSubmitter {
 
       this.analytics.totalSubmissions += urls.length;
       this.analytics.successfulSubmissions += urls.length;
-      this.analytics.averageResponseTime = (this.analytics.averageResponseTime * (this.analytics.totalSubmissions - urls.length) + (endTime - startTime)) / this.analytics.totalSubmissions;
+      const responseTime = endTime - startTime;
+      this.analytics.averageResponseTime = (this.analytics.averageResponseTime * (this.analytics.totalSubmissions - urls.length) + responseTime) / this.analytics.totalSubmissions;
 
       logger.info(`Batch submitted successfully: ${response.status}`);
     } catch (error) {
@@ -117,6 +120,7 @@ class IndexNowSubmitter {
   }
 
   async submitSingleUrl(url: string): Promise<void> {
+    logger.info(`Checking cache for URL: ${url}`);
     if (!this.cache.get(url)) {
       await this.submitUrls([url]);
     } else {
@@ -143,7 +147,7 @@ class IndexNowSubmitter {
   }
 
   getAnalytics(): Analytics {
-    return this.analytics;
+    return { ...this.analytics };
   }
 }
 
@@ -198,5 +202,6 @@ if (require.main === module) {
     process.exit(1);
   });
 }
+
 
 export { IndexNowSubmitter, Config, Analytics };
