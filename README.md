@@ -74,7 +74,7 @@ This setup allows you to take full advantage of TypeScript's static typing and t
 
 ## Prerequisites
 
-- Node.js 16 or higher
+- Node.js 14 or higher
 - npm (usually comes with Node.js)
 - A valid IndexNow API key
 - A website domain that you own and want to submit URLs for
