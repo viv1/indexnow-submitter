@@ -135,13 +135,13 @@ console.log('Submission analytics:', analytics);
 # Submit a single URL
 INDEXNOW_KEY=your-api-key INDEXNOW_HOST=your-website.com npx indexnow-submitter submit https://your-website.com/new-page
 
-# Submit URLs from a file
+# Submit URLs from a file (keep single url in each line)
 INDEXNOW_KEY=your-api-key INDEXNOW_HOST=your-website.com npx indexnow-submitter submit-file urls.txt
 
 # Submit URLs from a sitemap
 INDEXNOW_KEY=your-api-key INDEXNOW_HOST=your-website.com npx indexnow-submitter submit-sitemap https://your-website.com/sitemap.xml
 
-# Submit URLs from a sitemap, only those modified since a specific date
+# Submit URLs from a sitemap, only those modified since a specific date (filters out urls for which lastmod entry is not present)
 INDEXNOW_KEY=your-api-key INDEXNOW_HOST=your-website.com npx indexnow-submitter submit-sitemap https://your-website.com/sitemap.xml --modified-since 2023-01-01
 ```
 
@@ -295,7 +295,7 @@ const submitter = new IndexNowSubmitter({
 // Submit all URLs from the sitemap
 await submitter.submitFromSitemap('https://your-website.com/sitemap.xml');
 
-// Submit only URLs modified since January 1, 2023
+// Submit only URLs modified since January 1, 2023 (filters out urls for which lastmod entry is not present)
 const modifiedSince = new Date('2023-01-01');
 await submitter.submitFromSitemap('https://your-website.com/sitemap.xml', modifiedSince);
 ```

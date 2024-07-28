@@ -155,9 +155,10 @@ class IndexNowSubmitter {
   
       const urls = result.urlset?.url?.filter((entry: any) => {
         if (!modifiedSince) return true;
+        if (!entry.lastmod || !entry.lastmod[0]) return false; // ignore if lastmod entry is not present
         const lastmod = new Date(entry.lastmod[0]);
         return lastmod >= modifiedSince;
-      }).map((entry: any) => entry.loc[0]) || [];
+      }).map((entry: any) => entry.loc && entry.loc[0]).filter(Boolean) || [];
   
       logger.info(`Found ${urls.length} URLs in sitemap`);
       if (urls.length > 0) {
@@ -176,7 +177,7 @@ class IndexNowSubmitter {
 
 async function runCli(): Promise<void> {
   program
-    .version('1.3.0')
+    .version('1.3.1')
     .option('-e, --engine <engine>', 'Search engine domain')
     .option('-k, --key <key>', 'IndexNow API key')
     .option('-h, --host <host>', 'Your website host')
