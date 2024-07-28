@@ -1,6 +1,6 @@
 {
     "name": "indexnow-submitter",
-    "version": "1.1.0",
+    "version": "1.1.1",
     "description": "An IndexNow Submission module with caching and analytics",
     "repository": {
         "type": "git",
