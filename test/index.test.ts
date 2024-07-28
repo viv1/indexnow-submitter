@@ -33,12 +33,12 @@ describe('IndexNowSubmitter', () => {
   });
 
   test('submitUrls should submit multiple URLs in batches', async () => {
-    const urls = Array.from({ length: 250 }, (_, i) => `https://test-host.com/page${i + 1}`);
+    const urls = Array.from({ length: 350 }, (_, i) => `https://test-host.com/page${i + 1}`);
     mock.onPost('https://test.com/IndexNow').reply(200);
 
     await submitter.submitUrls(urls);
 
-    expect(mock.history.post.length).toBe(3); // 3 batches expected (250/100 = 2.5 -> 3)
+    expect(mock.history.post.length).toBe(4); // 4 batches expected (350/100 = 3.5 -> 4)
   });
 
   test('submitUrls should cache URLs', async () => {

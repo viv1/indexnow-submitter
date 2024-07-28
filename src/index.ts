@@ -119,15 +119,15 @@ class IndexNowSubmitter {
   }
 
   private async processBatch(urls: string[]): Promise<void> {
-    for (let i = 0; i < urls.length; i += this.config.batchSize) {
-      const batch = urls.slice(i, i + this.config.batchSize);
-      await this.submitBatch(batch);
-      batch.forEach(url => this.cache.set(url, true));
+    if (urls.length === 0) return; // Don't process empty batches
 
-      // Apply delay if there are more batches to process
-      if (i + this.config.batchSize < urls.length) {
-        await this.delay(this.config.rateLimitDelay);
-      }
+    const batch = urls.slice(0, this.config.batchSize);
+    await this.submitBatch(batch);
+    batch.forEach(url => this.cache.set(url, true));
+
+    if (urls.length > this.config.batchSize) {
+      await this.delay(this.config.rateLimitDelay);
+      await this.processBatch(urls.slice(this.config.batchSize));
     }
   }
 
@@ -176,7 +176,7 @@ class IndexNowSubmitter {
 
 async function runCli(): Promise<void> {
   program
-    .version('1.2.0')
+    .version('1.3.0')
     .option('-e, --engine <engine>', 'Search engine domain')
     .option('-k, --key <key>', 'IndexNow API key')
     .option('-h, --host <host>', 'Your website host')
