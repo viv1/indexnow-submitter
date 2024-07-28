@@ -31,7 +31,7 @@ interface Config {
   host: string;
   keyPath: string;
   batchSize: number;
-  rateLimitDelay: number;
+  rateLimit: number;
   cacheTTL: number;
 }
 
@@ -41,7 +41,7 @@ const defaultConfig: Config = {
   keyPath: process.env.INDEXNOW_KEY_PATH || `https://${process.env.INDEXNOW_HOST}/${process.env.INDEXNOW_KEY}.txt`,
   host: process.env.INDEXNOW_HOST || '',
   batchSize: 100,
-  rateLimitDelay: 1000,
+  rateLimit: 1000,
   cacheTTL: 86400 // 24 hours
 };
 
@@ -126,7 +126,7 @@ class IndexNowSubmitter {
     batch.forEach(url => this.cache.set(url, true));
 
     if (urls.length > this.config.batchSize) {
-      await this.delay(this.config.rateLimitDelay);
+      await this.delay(this.config.rateLimit);
       await this.processBatch(urls.slice(this.config.batchSize));
     }
   }

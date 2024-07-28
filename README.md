@@ -154,7 +154,7 @@ INDEXNOW_KEY=your-api-key INDEXNOW_HOST=your-website.com npx indexnow-submitter 
 | host | -h, --host | Your website host | (from INDEXNOW_HOST env variable) |
 | keyPath | -p, --key-path | IndexNow API key path | https://{host}/{key}.txt |
 | batchSize | -b, --batch-size | Batch size for URL submission | 100 |
-| rateLimitDelay | -r, --rate-limit | Delay between batches in milliseconds | 1000 |
+| rateLimit | -r, --rate-limit | Delay between batches in milliseconds | 1000 |
 | cacheTTL | -c, --cache-ttl | Cache TTL in seconds | 86400 (24 hours) |
 
 ## API Reference
@@ -191,7 +191,7 @@ interface Config {
   host: string;
   keyPath: string;
   batchSize: number;
-  rateLimitDelay: number;
+  rateLimit: number;
   cacheTTL: number;
 }
 ```
