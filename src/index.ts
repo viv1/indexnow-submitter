@@ -82,6 +82,8 @@ class IndexNowSubmitter {
   }
 
   private async submitBatch(urls: string[]): Promise<void> {
+    if (urls.length === 0) return; // Don't submit empty batches
+
     const endpoint = `https://${this.config.engine}/IndexNow`;
     const payload = {
       host: this.config.host,
@@ -90,17 +92,14 @@ class IndexNowSubmitter {
       urlList: urls
     };
 
-    logger.info(`Submitting urls: ${urls}`);
+    logger.info(`Submitting batch of ${urls.length} urls`);
 
     try {
       const startTime = Date.now();
       const response = await axios.post(endpoint, payload);
       const endTime = Date.now();
 
-      this.analytics.totalSubmissions += urls.length;
-      this.analytics.successfulSubmissions += urls.length;
-      const responseTime = endTime - startTime;
-      this.analytics.averageResponseTime = (this.analytics.averageResponseTime * (this.analytics.totalSubmissions - urls.length) + responseTime) / this.analytics.totalSubmissions;
+      this.updateAnalytics(urls.length, endTime - startTime);
 
       logger.info(`Batch submitted successfully: ${response.status}`);
     } catch (error) {
@@ -111,13 +110,32 @@ class IndexNowSubmitter {
     }
   }
 
-  async submitUrls(urls: string[]): Promise<void> {
-    const uncachedUrls = urls.filter(url => !this.cache.get(url));
-    for (let i = 0; i < uncachedUrls.length; i += this.config.batchSize) {
-      const batch = uncachedUrls.slice(i, i + this.config.batchSize);
+  private updateAnalytics(urlCount: number, responseTime: number): void {
+    this.analytics.totalSubmissions += urlCount;
+    this.analytics.successfulSubmissions += urlCount;
+    this.analytics.averageResponseTime = 
+      (this.analytics.averageResponseTime * (this.analytics.totalSubmissions - urlCount) + responseTime) / 
+      this.analytics.totalSubmissions;
+  }
+
+  private async processBatch(urls: string[]): Promise<void> {
+    for (let i = 0; i < urls.length; i += this.config.batchSize) {
+      const batch = urls.slice(i, i + this.config.batchSize);
       await this.submitBatch(batch);
       batch.forEach(url => this.cache.set(url, true));
-      await this.delay(this.config.rateLimitDelay);
+
+      // Apply delay if there are more batches to process
+      if (i + this.config.batchSize < urls.length) {
+        await this.delay(this.config.rateLimitDelay);
+      }
+    }
+  }
+
+  async submitUrls(urls: string[]): Promise<void> {
+    const uncachedUrls = urls.filter(url => !this.cache.get(url));
+    logger.info(`Submitting ${uncachedUrls.length} uncached URLs`);
+    if (uncachedUrls.length > 0) {
+      await this.processBatch(uncachedUrls);
     }
   }
 
@@ -139,12 +157,15 @@ class IndexNowSubmitter {
         if (!modifiedSince) return true;
         const lastmod = new Date(entry.lastmod[0]);
         return lastmod >= modifiedSince;
-      }).map((entry: any) => entry.loc[0]) || []; // Handle empty urlset or url
+      }).map((entry: any) => entry.loc[0]) || [];
   
-      await this.submitUrls(urls);
+      logger.info(`Found ${urls.length} URLs in sitemap`);
+      if (urls.length > 0) {
+        await this.submitUrls(urls);
+      }
     } catch (error) {
       logger.error('Error processing sitemap:', error);
-      throw error; // Re-throw the error to be handled by the calling code
+      throw error;
     }
   }
 

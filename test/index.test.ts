@@ -58,7 +58,7 @@ describe('IndexNowSubmitter', () => {
 
     await submitter.submitUrls(urls);
 
-    expect(delaySpy).toHaveBeenCalledTimes(3); // 2 delays expected for 3 batches
+    expect(delaySpy).toHaveBeenCalledTimes(2); // 2 delays expected for 3 batches
   });
 
   test('submitFromSitemap should fetch and submit URLs from a sitemap', async () => {
