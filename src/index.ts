@@ -181,9 +181,9 @@ async function runCli(): Promise<void> {
     .option('-k, --key <key>', 'IndexNow API key')
     .option('-h, --host <host>', 'Your website host')
     .option('-p, --key-path <key-path>', 'IndexNow API key path')
-    .option('-b, --batch-size <size>', 'Batch size for URL submission')
-    .option('-r, --rate-limit <delay>', 'Delay between batches in milliseconds')
-    .option('-c, --cache-ttl <ttl>', 'Cache TTL in seconds');
+    .option('-b, --batch-size <size>', 'Batch size for URL submission, default is 100')
+    .option('-r, --rate-limit <delay>', 'Delay between batches in milliseconds, default is 1000')
+    .option('-c, --cache-ttl <ttl>', 'Cache TTL in seconds, default is  (24 hours)');
 
   program
     .command('submit <url>')
@@ -196,7 +196,7 @@ async function runCli(): Promise<void> {
 
   program
     .command('submit-file <file>')
-    .description('Submit URLs from a file')
+    .description('Submit URLs from a file, with each url in a single line')
     .action(async (file: string) => {
       const submitter = new IndexNowSubmitter(program.opts());
       const content = await fs.readFile(file, 'utf-8');

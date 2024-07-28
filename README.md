@@ -214,7 +214,7 @@ interface Analytics {
 | Command | Description |
 |---------|-------------|
 | `submit <url>` | Submit a single URL |
-| `submit-file <file>` | Submit URLs from a file |
+| `submit-file <file>` | Submit URLs from a file, with each url in a single line |
 | `submit-sitemap <url>` | Submit URLs from a sitemap |
 
 ### Global Options
