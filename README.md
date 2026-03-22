@@ -17,9 +17,10 @@ IndexNow Submitter is a powerful and flexible TypeScript/JavaScript module for s
 9. [Analytics](#analytics)
 10. [Sitemap Parsing](#sitemap-parsing)
 11. [Error Handling and Logging](#error-handling-and-logging)
-12. [Development](#development)
-13. [Contributing](#contributing)
-14. [License](#license)
+12. [Supported Search Engines](#supported-search-engines)
+13. [Development](#development)
+14. [Contributing](#contributing)
+15. [License](#license)
 
 ## Installation
 
@@ -83,15 +84,18 @@ This setup allows you to take full advantage of TypeScript's static typing and t
 ## Features
 
 - Submit single URLs or batches of URLs to search engines using the IndexNow protocol
-- Parse and submit URLs from sitemaps
+- Notify search engines about deleted URLs
+- Parse and submit URLs from sitemaps, including sitemap index files
 - Instance-based caching to avoid resubmitting recently submitted URLs
 - Analytics to track submission statistics
 - Rate limiting to comply with search engine submission guidelines
-- Configurable options for search engine, API key, host, batch size, and more
+- Automatic retry with exponential backoff on 429 (Too Many Requests)
+- Proper handling of all IndexNow HTTP responses (200, 202, 4xx)
+- API key format validation per IndexNow spec (8-128 chars, alphanumeric + dashes)
+- Configurable options for search engine, API key, host, batch size (up to 10,000), and more
 - Command-line interface (CLI) for easy use in scripts and automation
 - TypeScript support for improved developer experience
 - Comprehensive logging for debugging and monitoring
-- Modular architecture for easy extension and customization
 
 ## Usage
 
@@ -106,7 +110,7 @@ const submitter = new IndexNowSubmitter({
   engine: 'api.indexnow.org',
   key: 'your-api-key',
   host: 'your-website.com',
-  keyPath: 'https://your-website.com/your-api-key.txt'
+  keyLocation: 'https://your-website.com/your-api-key.txt'
 });
 
 // Submit a single URL
@@ -119,10 +123,15 @@ submitter.submitUrls(['https://your-website.com/page1', 'https://your-website.co
   .then(() => console.log('URLs submitted successfully'))
   .catch(error => console.error('Error submitting URLs:', error));
 
-// Submit URLs from a sitemap
+// Submit URLs from a sitemap (supports both regular sitemaps and sitemap index files)
 submitter.submitFromSitemap('https://your-website.com/sitemap.xml')
   .then(() => console.log('Sitemap URLs submitted successfully'))
   .catch(error => console.error('Error submitting sitemap URLs:', error));
+
+// Notify search engines about deleted URLs
+submitter.notifyDeleted(['https://your-website.com/old-page'])
+  .then(() => console.log('Deletion notified successfully'))
+  .catch(error => console.error('Error notifying deletion:', error));
 
 // Get analytics
 const analytics = submitter.getAnalytics();
@@ -138,11 +147,17 @@ INDEXNOW_KEY=your-api-key INDEXNOW_HOST=your-website.com npx indexnow-submitter 
 # Submit URLs from a file (keep single url in each line)
 INDEXNOW_KEY=your-api-key INDEXNOW_HOST=your-website.com npx indexnow-submitter submit-file urls.txt
 
-# Submit URLs from a sitemap
+# Submit URLs from a sitemap (supports sitemap index files too)
 INDEXNOW_KEY=your-api-key INDEXNOW_HOST=your-website.com npx indexnow-submitter submit-sitemap https://your-website.com/sitemap.xml
 
 # Submit URLs from a sitemap, only those modified since a specific date (filters out urls for which lastmod entry is not present)
 INDEXNOW_KEY=your-api-key INDEXNOW_HOST=your-website.com npx indexnow-submitter submit-sitemap https://your-website.com/sitemap.xml --modified-since 2023-01-01
+
+# Notify search engines about a deleted URL
+INDEXNOW_KEY=your-api-key INDEXNOW_HOST=your-website.com npx indexnow-submitter notify-deleted https://your-website.com/old-page
+
+# Notify search engines about deleted URLs from a file
+INDEXNOW_KEY=your-api-key INDEXNOW_HOST=your-website.com npx indexnow-submitter notify-deleted-file deleted-urls.txt
 ```
 
 ## Configuration Options
@@ -152,8 +167,8 @@ INDEXNOW_KEY=your-api-key INDEXNOW_HOST=your-website.com npx indexnow-submitter 
 | engine | -e, --engine | Search engine domain | api.indexnow.org |
 | key | -k, --key | IndexNow API key | (from INDEXNOW_KEY env variable) |
 | host | -h, --host | Your website host | (from INDEXNOW_HOST env variable) |
-| keyPath | -p, --key-path | IndexNow API key path | https://{host}/{key}.txt |
-| batchSize | -b, --batch-size | Batch size for URL submission | 100 |
+| keyLocation | -p, --key-location | IndexNow API key location URL | https://{host}/{key}.txt |
+| batchSize | -b, --batch-size | Batch size for URL submission (max 10,000) | 100 |
 | rateLimit | -r, --rate-limit | Delay between batches in milliseconds | 1000 |
 | cacheTTL | -c, --cache-ttl | Cache TTL in seconds | 86400 (24 hours) |
 
@@ -177,7 +192,8 @@ Creates a new instance of IndexNowSubmitter with the given configuration.
 |--------|-------------|
 | `submitSingleUrl(url: string): Promise<void>` | Submits a single URL to the search engine |
 | `submitUrls(urls: string[]): Promise<void>` | Submits multiple URLs to the search engine |
-| `submitFromSitemap(sitemapUrl: string, modifiedSince?: Date): Promise<void>` | Submits URLs from a sitemap |
+| `submitFromSitemap(sitemapUrl: string, modifiedSince?: Date): Promise<void>` | Submits URLs from a sitemap or sitemap index |
+| `notifyDeleted(urls: string[]): Promise<void>` | Notifies search engines about deleted URLs |
 | `getAnalytics(): Analytics` | Returns the current analytics data |
 
 ### `Config`
@@ -187,10 +203,10 @@ Configuration interface for IndexNowSubmitter.
 ```typescript
 interface Config {
   engine: string;
-  key: string;
+  key: string;       // 8-128 chars, alphanumeric and dashes only
   host: string;
-  keyPath: string;
-  batchSize: number;
+  keyLocation: string;
+  batchSize: number;  // max 10,000
   rateLimit: number;
   cacheTTL: number;
 }
@@ -214,21 +230,23 @@ interface Analytics {
 | Command | Description |
 |---------|-------------|
 | `submit <url>` | Submit a single URL |
-| `submit-file <file>` | Submit URLs from a file, with each url in a single line |
-| `submit-sitemap <url>` | Submit URLs from a sitemap |
+| `submit-file <file>` | Submit URLs from a file, with each URL in a single line |
+| `submit-sitemap <url>` | Submit URLs from a sitemap or sitemap index |
+| `notify-deleted <url>` | Notify search engines that a URL has been deleted |
+| `notify-deleted-file <file>` | Notify search engines about deleted URLs from a file |
 
 ### Global Options
 
 All CLI commands support the following options:
 
 ```
--e, --engine <engine>       Search engine domain
--k, --key <key>             IndexNow API key
--h, --host <host>           Your website host
--p, --key-path <key-path>   IndexNow API key path
--b, --batch-size <size>     Batch size for URL submission
--r, --rate-limit <delay>    Delay between batches in milliseconds
--c, --cache-ttl <ttl>       Cache TTL in seconds
+-e, --engine <engine>                 Search engine domain
+-k, --key <key>                       IndexNow API key
+-h, --host <host>                     Your website host
+-p, --key-location <key-location>     IndexNow API key location URL
+-b, --batch-size <size>               Batch size for URL submission (max 10,000)
+-r, --rate-limit <delay>              Delay between batches in milliseconds
+-c, --cache-ttl <ttl>                 Cache TTL in seconds
 ```
 
 ## Caching
@@ -282,7 +300,9 @@ Analytics are specific to each instance of IndexNowSubmitter, allowing you to tr
 
 ## Sitemap Parsing
 
-IndexNow Submitter can parse XML sitemaps and submit the URLs found within them. When using the `submitFromSitemap` method or the `submit-sitemap` CLI command, you can optionally specify a `modifiedSince` date to only submit URLs that have been modified since that date.
+IndexNow Submitter can parse XML sitemaps and submit the URLs found within them. It supports both regular `<urlset>` sitemaps and `<sitemapindex>` files that reference multiple child sitemaps — these are recursively fetched and processed.
+
+When using the `submitFromSitemap` method or the `submit-sitemap` CLI command, you can optionally specify a `modifiedSince` date to only submit URLs that have been modified since that date.
 
 Example:
 
@@ -292,7 +312,7 @@ const submitter = new IndexNowSubmitter({
   host: 'your-website.com'
 });
 
-// Submit all URLs from the sitemap
+// Submit all URLs from the sitemap (works with sitemap index files too)
 await submitter.submitFromSitemap('https://your-website.com/sitemap.xml');
 
 // Submit only URLs modified since January 1, 2023 (filters out urls for which lastmod entry is not present)
@@ -304,7 +324,24 @@ await submitter.submitFromSitemap('https://your-website.com/sitemap.xml', modifi
 
 The module uses Winston for logging. Logs are written to both the console and a file named `indexnow.log`. The log level is set to `info` by default, which logs all successful operations and errors.
 
-Error handling is implemented throughout the module. In case of errors during submission, the module will log the error and throw an exception, which you can catch and handle in your application.
+### HTTP Response Handling
+
+The module handles all IndexNow HTTP response codes:
+
+| Code | Handling |
+|------|----------|
+| 200 OK | Submission successful |
+| 202 Accepted | URLs received, key validation pending (treated as success) |
+| 400 Bad Request | Throws error with descriptive message |
+| 403 Forbidden | Throws error (invalid or missing key) |
+| 422 Unprocessable Entity | Throws error (URL/host mismatch) |
+| 429 Too Many Requests | Automatic retry with exponential backoff (up to 3 retries) |
+
+### Validation
+
+The constructor validates configuration upfront:
+- API key format must match IndexNow spec (8-128 characters, alphanumeric and dashes only)
+- Batch size cannot exceed 10,000 (IndexNow protocol limit)
 
 Example of error handling:
 
@@ -322,6 +359,18 @@ try {
   // Handle the error (e.g., retry, notify admin, etc.)
 }
 ```
+
+## Supported Search Engines
+
+IndexNow is supported by the following search engines. Submitting to any one of them automatically shares the URL with all other participating engines.
+
+- **Microsoft Bing** (`www.bing.com`)
+- **Yandex** (`yandex.com`)
+- **Naver** (`searchadvisor.naver.com`)
+- **Seznam.cz** (`search.seznam.cz`)
+- **Yep** (`indexnow.yep.com`)
+
+The default engine `api.indexnow.org` acts as a shared endpoint that distributes to all participants.
 
 ## Development
 
