@@ -227,6 +227,11 @@ class IndexNowSubmitter {
     }
   }
 
+  async notifyDeleted(urls: string[]): Promise<void> {
+    logger.info(`Notifying deletion of ${urls.length} URLs`);
+    await this.submitUrls(urls);
+  }
+
   getAnalytics(): Analytics {
     return { ...this.analytics };
   }
@@ -271,6 +276,26 @@ async function runCli(): Promise<void> {
       const submitter = new IndexNowSubmitter(program.opts());
       const modifiedSince = options.modifiedSince ? new Date(options.modifiedSince) : undefined;
       await submitter.submitFromSitemap(url, modifiedSince);
+      console.log('Analytics:', submitter.getAnalytics());
+    });
+
+  program
+    .command('notify-deleted <url>')
+    .description('Notify search engines that a URL has been deleted')
+    .action(async (url: string) => {
+      const submitter = new IndexNowSubmitter(program.opts());
+      await submitter.notifyDeleted([url]);
+      console.log('Analytics:', submitter.getAnalytics());
+    });
+
+  program
+    .command('notify-deleted-file <file>')
+    .description('Notify search engines about deleted URLs from a file, one per line')
+    .action(async (file: string) => {
+      const submitter = new IndexNowSubmitter(program.opts());
+      const content = await fs.readFile(file, 'utf-8');
+      const urls = content.split('\n').filter(url => url.trim() !== '');
+      await submitter.notifyDeleted(urls);
       console.log('Analytics:', submitter.getAnalytics());
     });
 

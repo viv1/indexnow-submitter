@@ -229,6 +229,21 @@ describe('IndexNowSubmitter', () => {
       expect(mock.history.post.length).toBe(2); // 1 post per child sitemap
     });
 
+    test('notifyDeleted should submit deleted URLs for re-crawling', async () => {
+      mock.onPost('https://test.com/IndexNow').reply(200);
+      await submitter.notifyDeleted([
+        'https://test-host.com/deleted-page1',
+        'https://test-host.com/deleted-page2'
+      ]);
+      expect(mock.history.post.length).toBe(1);
+      const payload = JSON.parse(mock.history.post[0].data);
+      expect(payload.urlList).toEqual([
+        'https://test-host.com/deleted-page1',
+        'https://test-host.com/deleted-page2'
+      ]);
+      expect(submitter.getAnalytics().successfulSubmissions).toBe(2);
+    });
+
     test('submitFromSitemap with modifiedSince should filter URLs', async () => {
       const sitemapUrl = 'https://test-host.com/sitemap.xml';
       const sitemapContent = `
