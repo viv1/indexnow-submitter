@@ -188,18 +188,35 @@ class IndexNowSubmitter {
     }
   }
 
+  private extractUrlsFromUrlset(result: any, modifiedSince?: Date): string[] {
+    return result.urlset?.url?.filter((entry: any) => {
+      if (!modifiedSince) return true;
+      if (!entry.lastmod || !entry.lastmod[0]) return false;
+      const lastmod = new Date(entry.lastmod[0]);
+      return lastmod >= modifiedSince;
+    }).map((entry: any) => entry.loc && entry.loc[0]).filter(Boolean) || [];
+  }
+
   async submitFromSitemap(sitemapUrl: string, modifiedSince?: Date): Promise<void> {
     try {
       const response = await axios.get(sitemapUrl);
       const result: any = await parseXml(response.data);
-  
-      const urls = result.urlset?.url?.filter((entry: any) => {
-        if (!modifiedSince) return true;
-        if (!entry.lastmod || !entry.lastmod[0]) return false; // ignore if lastmod entry is not present
-        const lastmod = new Date(entry.lastmod[0]);
-        return lastmod >= modifiedSince;
-      }).map((entry: any) => entry.loc && entry.loc[0]).filter(Boolean) || [];
-  
+
+      // Handle sitemap index files
+      if (result.sitemapindex) {
+        const sitemapUrls = result.sitemapindex.sitemap
+          ?.map((entry: any) => entry.loc && entry.loc[0])
+          .filter(Boolean) || [];
+        logger.info(`Found sitemap index with ${sitemapUrls.length} child sitemaps`);
+        for (const childUrl of sitemapUrls) {
+          await this.submitFromSitemap(childUrl, modifiedSince);
+        }
+        return;
+      }
+
+      // Handle regular urlset sitemaps
+      const urls = this.extractUrlsFromUrlset(result, modifiedSince);
+
       logger.info(`Found ${urls.length} URLs in sitemap`);
       if (urls.length > 0) {
         await this.submitUrls(urls);

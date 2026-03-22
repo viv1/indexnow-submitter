@@ -198,6 +198,37 @@ describe('IndexNowSubmitter', () => {
       expect(mock.history.post.length).toBe(0); // No requests should be made
     });    
     
+    test('submitFromSitemap should handle sitemap index files', async () => {
+      const sitemapIndexUrl = 'https://test-host.com/sitemap-index.xml';
+      const sitemapIndexContent = `
+        <sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+          <sitemap><loc>https://test-host.com/sitemap1.xml</loc></sitemap>
+          <sitemap><loc>https://test-host.com/sitemap2.xml</loc></sitemap>
+        </sitemapindex>
+      `;
+      const sitemap1Content = `
+        <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+          <url><loc>https://test-host.com/page1</loc></url>
+        </urlset>
+      `;
+      const sitemap2Content = `
+        <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+          <url><loc>https://test-host.com/page2</loc></url>
+          <url><loc>https://test-host.com/page3</loc></url>
+        </urlset>
+      `;
+
+      mock.onGet(sitemapIndexUrl).reply(200, sitemapIndexContent);
+      mock.onGet('https://test-host.com/sitemap1.xml').reply(200, sitemap1Content);
+      mock.onGet('https://test-host.com/sitemap2.xml').reply(200, sitemap2Content);
+      mock.onPost('https://test.com/IndexNow').reply(200);
+
+      await submitter.submitFromSitemap(sitemapIndexUrl);
+
+      expect(mock.history.get.length).toBe(3); // index + 2 child sitemaps
+      expect(mock.history.post.length).toBe(2); // 1 post per child sitemap
+    });
+
     test('submitFromSitemap with modifiedSince should filter URLs', async () => {
       const sitemapUrl = 'https://test-host.com/sitemap.xml';
       const sitemapContent = `
