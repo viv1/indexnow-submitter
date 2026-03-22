@@ -29,16 +29,19 @@ interface Config {
   engine: string;
   key: string;
   host: string;
-  keyPath: string;
+  keyLocation: string;
   batchSize: number;
   rateLimit: number;
   cacheTTL: number;
 }
 
+const KEY_PATTERN = /^[a-zA-Z0-9-]{8,128}$/;
+const MAX_BATCH_SIZE = 10000;
+
 const defaultConfig: Config = {
   engine: 'api.indexnow.org',
   key: process.env.INDEXNOW_KEY || '',
-  keyPath: process.env.INDEXNOW_KEY_PATH || `https://${process.env.INDEXNOW_HOST}/${process.env.INDEXNOW_KEY}.txt`,
+  keyLocation: process.env.INDEXNOW_KEY_LOCATION || process.env.INDEXNOW_KEY_PATH || `https://${process.env.INDEXNOW_HOST}/${process.env.INDEXNOW_KEY}.txt`,
   host: process.env.INDEXNOW_HOST || '',
   batchSize: 100,
   rateLimit: 1000,
@@ -67,7 +70,15 @@ class IndexNowSubmitter {
     if (missingConfig.length > 0) {
       throw new Error(`Missing required config: ${missingConfig.join(', ')}`);
     }
-  
+
+    if (!KEY_PATTERN.test(this.config.key)) {
+      throw new Error(`Invalid key format: must be 8-128 characters, only alphanumeric and dashes allowed`);
+    }
+
+    if (this.config.batchSize > MAX_BATCH_SIZE) {
+      throw new Error(`batchSize cannot exceed ${MAX_BATCH_SIZE}`);
+    }
+
     this.cache = new NodeCache({ stdTTL: this.config.cacheTTL });
     this.analytics = {
       totalSubmissions: 0,
@@ -88,7 +99,7 @@ class IndexNowSubmitter {
     const payload = {
       host: this.config.host,
       key: this.config.key,
-      keyPath: this.config.keyPath,
+      keyLocation: this.config.keyLocation,
       urlList: urls
     };
 
@@ -96,7 +107,9 @@ class IndexNowSubmitter {
 
     try {
       const startTime = Date.now();
-      const response = await axios.post(endpoint, payload);
+      const response = await axios.post(endpoint, payload, {
+        headers: { 'Content-Type': 'application/json; charset=utf-8' }
+      });
       const endTime = Date.now();
 
       this.updateAnalytics(urls.length, endTime - startTime);
@@ -181,7 +194,7 @@ async function runCli(): Promise<void> {
     .option('-e, --engine <engine>', 'Search engine domain')
     .option('-k, --key <key>', 'IndexNow API key')
     .option('-h, --host <host>', 'Your website host')
-    .option('-p, --key-path <key-path>', 'IndexNow API key path')
+    .option('-p, --key-location <key-location>', 'IndexNow API key location URL')
     .option('-b, --batch-size <size>', 'Batch size for URL submission, default is 100')
     .option('-r, --rate-limit <delay>', 'Delay between batches in milliseconds, default is 1000')
     .option('-c, --cache-ttl <ttl>', 'Cache TTL in seconds, default is  (24 hours)');

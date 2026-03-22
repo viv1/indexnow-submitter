@@ -8,8 +8,8 @@ describe('IndexNowSubmitter', () => {
   let submitter: IndexNowSubmitter;
   const defaultConfig = {
     engine: 'test.com',
-    key: 'test-key',
-    keyPath: 'https://test-host.com/test-key-path',
+    key: 'test-key-1234',
+    keyLocation: 'https://test-host.com/test-key-1234.txt',
     host: 'test-host.com',
     batchSize: 100,
     rateLimitDelay: 1000,
@@ -29,7 +29,12 @@ describe('IndexNowSubmitter', () => {
     mock.onPost('https://test.com/IndexNow').reply(200);
     await submitter.submitSingleUrl('https://test-host.com/page1');
     expect(mock.history.post.length).toBe(1);
-    // ... rest of the assertions (same as before)
+
+    const request = mock.history.post[0];
+    const payload = JSON.parse(request.data);
+    expect(payload.keyLocation).toBeDefined();
+    expect(payload.keyPath).toBeUndefined();
+    expect(request.headers!['Content-Type']).toBe('application/json; charset=utf-8');
   });
 
   test('submitUrls should submit multiple URLs in batches', async () => {
@@ -106,19 +111,35 @@ describe('IndexNowSubmitter', () => {
 
     test('constructor should throw if required config is missing', () => {
       expect(() => {
-        new IndexNowSubmitter({ key: '', host: '' }); 
+        new IndexNowSubmitter({ key: '', host: '' });
       }).toThrow('Missing required config: key, host');
-    
+
       expect(() => {
-        new IndexNowSubmitter({ key: 'some-key' }); // Missing host
+        new IndexNowSubmitter({ key: 'some-key-1234' }); // Missing host
       }).toThrow('Missing required config: host');
-    
+
       expect(() => {
         new IndexNowSubmitter({ host: 'some-host' }); // Missing key
       }).toThrow('Missing required config: key');
     });
-    
-    
+
+    test('constructor should throw for invalid key format', () => {
+      expect(() => {
+        new IndexNowSubmitter({ key: 'short', host: 'example.com' });
+      }).toThrow('Invalid key format');
+
+      expect(() => {
+        new IndexNowSubmitter({ key: 'invalid!key@chars', host: 'example.com' });
+      }).toThrow('Invalid key format');
+    });
+
+    test('constructor should throw if batchSize exceeds 10000', () => {
+      expect(() => {
+        new IndexNowSubmitter({ key: 'valid-key-1234', host: 'example.com', batchSize: 20000 });
+      }).toThrow('batchSize cannot exceed 10000');
+    });
+
+
   });
 
   describe('IndexNowSubmitter - Edge Cases', () => {
