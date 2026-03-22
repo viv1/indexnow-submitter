@@ -142,6 +142,46 @@ describe('IndexNowSubmitter', () => {
 
   });
 
+  describe('IndexNowSubmitter - HTTP Status Handling', () => {
+    test('should treat 202 Accepted as success', async () => {
+      mock.onPost('https://test.com/IndexNow').reply(202);
+      await submitter.submitSingleUrl('https://test-host.com/page1');
+      const analytics = submitter.getAnalytics();
+      expect(analytics.successfulSubmissions).toBe(1);
+    });
+
+    test('should retry on 429 with exponential backoff', async () => {
+      let callCount = 0;
+      mock.onPost('https://test.com/IndexNow').reply(() => {
+        callCount++;
+        if (callCount < 3) return [429];
+        return [200];
+      });
+      const delaySpy = jest.spyOn(submitter, 'delay').mockResolvedValue();
+
+      await submitter.submitSingleUrl('https://test-host.com/page1');
+
+      expect(callCount).toBe(3);
+      expect(delaySpy).toHaveBeenCalledWith(1000); // 2^0 * 1000
+      expect(delaySpy).toHaveBeenCalledWith(2000); // 2^1 * 1000
+    });
+
+    test('should fail after max retries on persistent 429', async () => {
+      mock.onPost('https://test.com/IndexNow').reply(429);
+      jest.spyOn(submitter, 'delay').mockResolvedValue();
+
+      await expect(submitter.submitUrls(['https://test-host.com/page1']))
+        .rejects.toThrow('Rate limited: max retries exceeded');
+    });
+
+    test('should throw on 4xx errors (e.g. 403 Forbidden)', async () => {
+      mock.onPost('https://test.com/IndexNow').reply(403);
+
+      await expect(submitter.submitUrls(['https://test-host.com/page1']))
+        .rejects.toThrow('Submission failed with status 403');
+    });
+  });
+
   describe('IndexNowSubmitter - Edge Cases', () => {
     test('submitUrls with no URLs shouldx not make requests', async () => {
       await submitter.submitUrls([]);

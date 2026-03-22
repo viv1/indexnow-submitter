@@ -92,9 +92,10 @@ class IndexNowSubmitter {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
 
-  private async submitBatch(urls: string[]): Promise<void> {
+  private async submitBatch(urls: string[], retryCount = 0): Promise<void> {
     if (urls.length === 0) return; // Don't submit empty batches
 
+    const MAX_RETRIES = 3;
     const endpoint = `https://${this.config.engine}/IndexNow`;
     const payload = {
       host: this.config.host,
@@ -108,14 +109,40 @@ class IndexNowSubmitter {
     try {
       const startTime = Date.now();
       const response = await axios.post(endpoint, payload, {
-        headers: { 'Content-Type': 'application/json; charset=utf-8' }
+        headers: { 'Content-Type': 'application/json; charset=utf-8' },
+        validateStatus: (status) => status < 500
       });
       const endTime = Date.now();
 
-      this.updateAnalytics(urls.length, endTime - startTime);
+      if (response.status === 429) {
+        if (retryCount >= MAX_RETRIES) {
+          this.analytics.totalSubmissions += urls.length;
+          this.analytics.failedSubmissions += urls.length;
+          throw new Error('Rate limited: max retries exceeded');
+        }
+        const backoffMs = Math.pow(2, retryCount) * 1000;
+        logger.warn(`Rate limited (429). Retrying in ${backoffMs}ms (attempt ${retryCount + 1}/${MAX_RETRIES})`);
+        await this.delay(backoffMs);
+        return this.submitBatch(urls, retryCount + 1);
+      }
 
-      logger.info(`Batch submitted successfully: ${response.status}`);
-    } catch (error) {
+      if (response.status === 202) {
+        logger.info(`Batch accepted (202): URLs received, key validation pending`);
+      } else if (response.status === 200) {
+        logger.info(`Batch submitted successfully: ${response.status}`);
+      } else if (response.status >= 400) {
+        this.analytics.totalSubmissions += urls.length;
+        this.analytics.failedSubmissions += urls.length;
+        const msg = `Submission failed with status ${response.status}`;
+        logger.error(msg);
+        throw new Error(msg);
+      }
+
+      this.updateAnalytics(urls.length, endTime - startTime);
+    } catch (error: any) {
+      if (error.message?.startsWith('Rate limited:') || error.message?.startsWith('Submission failed')) {
+        throw error;
+      }
       this.analytics.totalSubmissions += urls.length;
       this.analytics.failedSubmissions += urls.length;
       logger.error('Error submitting batch:', error);
