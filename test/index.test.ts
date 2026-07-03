@@ -190,6 +190,20 @@ describe('IndexNowSubmitter', () => {
         .rejects.toThrow('Rate limited: max retries exceeded');
     });
 
+    test('averageResponseTime should reflect request duration and ignore failed batches', async () => {
+      const nowSpy = jest.spyOn(Date, 'now')
+        .mockReturnValueOnce(1000).mockReturnValueOnce(1100)
+        .mockReturnValueOnce(2000).mockReturnValueOnce(2500);
+      mock.onPost('https://test.com/IndexNow').replyOnce(403);
+      mock.onPost('https://test.com/IndexNow').reply(200);
+
+      await expect(submitter.submitUrls(['https://test-host.com/page1'])).rejects.toThrow();
+      await submitter.submitUrls(['https://test-host.com/page2']);
+
+      expect(submitter.getAnalytics().averageResponseTime).toBe(500);
+      nowSpy.mockRestore();
+    });
+
     test('should throw on 4xx errors (e.g. 403 Forbidden)', async () => {
       mock.onPost('https://test.com/IndexNow').reply(403);
 

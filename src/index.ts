@@ -59,6 +59,7 @@ class IndexNowSubmitter {
   private config: Config;
   private cache: NodeCache;
   private analytics: Analytics;
+  private successfulBatches = 0;
 
   constructor(config: Partial<Config> = {}) {
     this.config = { ...defaultConfig, ...config };
@@ -157,9 +158,10 @@ class IndexNowSubmitter {
   private updateAnalytics(urlCount: number, responseTime: number): void {
     this.analytics.totalSubmissions += urlCount;
     this.analytics.successfulSubmissions += urlCount;
-    this.analytics.averageResponseTime = 
-      (this.analytics.averageResponseTime * (this.analytics.totalSubmissions - urlCount) + responseTime) / 
-      this.analytics.totalSubmissions;
+    this.successfulBatches++;
+    this.analytics.averageResponseTime =
+      (this.analytics.averageResponseTime * (this.successfulBatches - 1) + responseTime) /
+      this.successfulBatches;
   }
 
   private async processBatch(urls: string[]): Promise<void> {
