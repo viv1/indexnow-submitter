@@ -1,5 +1,11 @@
 src/
 test/
 tsconfig.json
+jest.config.js
+Makefile
 .gitignore
+.claude/
+.github/
 *.log
+conversation-summary.md
+urls.txt

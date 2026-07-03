@@ -239,7 +239,7 @@ class IndexNowSubmitter {
 
 async function runCli(): Promise<void> {
   program
-    .version('1.3.1')
+    .version('1.4.0')
     .option('-e, --engine <engine>', 'Search engine domain')
     .option('-k, --key <key>', 'IndexNow API key')
     .option('-h, --host <host>', 'Your website host')
