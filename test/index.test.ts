@@ -37,6 +37,22 @@ describe('IndexNowSubmitter', () => {
     expect(request.headers!['Content-Type']).toBe('application/json; charset=utf-8');
   });
 
+  test('keyLocation should default to key file at host root when not provided', async () => {
+    delete process.env.INDEXNOW_KEY_LOCATION;
+    delete process.env.INDEXNOW_KEY_PATH;
+    const s = new IndexNowSubmitter({
+      engine: 'test.com',
+      key: 'test-key-1234',
+      host: 'test-host.com'
+    });
+    mock.onPost('https://test.com/IndexNow').reply(200);
+
+    await s.submitSingleUrl('https://test-host.com/page1');
+
+    const payload = JSON.parse(mock.history.post[0].data);
+    expect(payload.keyLocation).toBe('https://test-host.com/test-key-1234.txt');
+  });
+
   test('submitUrls should submit multiple URLs in batches', async () => {
     const urls = Array.from({ length: 350 }, (_, i) => `https://test-host.com/page${i + 1}`);
     mock.onPost('https://test.com/IndexNow').reply(200);

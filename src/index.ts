@@ -41,7 +41,7 @@ const MAX_BATCH_SIZE = 10000;
 const defaultConfig: Config = {
   engine: 'api.indexnow.org',
   key: process.env.INDEXNOW_KEY || '',
-  keyLocation: process.env.INDEXNOW_KEY_LOCATION || process.env.INDEXNOW_KEY_PATH || `https://${process.env.INDEXNOW_HOST}/${process.env.INDEXNOW_KEY}.txt`,
+  keyLocation: process.env.INDEXNOW_KEY_LOCATION || process.env.INDEXNOW_KEY_PATH || '',
   host: process.env.INDEXNOW_HOST || '',
   batchSize: 100,
   rateLimit: 1000,
@@ -77,6 +77,10 @@ class IndexNowSubmitter {
 
     if (this.config.batchSize > MAX_BATCH_SIZE) {
       throw new Error(`batchSize cannot exceed ${MAX_BATCH_SIZE}`);
+    }
+
+    if (!this.config.keyLocation) {
+      this.config.keyLocation = `https://${this.config.host}/${this.config.key}.txt`;
     }
 
     this.cache = new NodeCache({ stdTTL: this.config.cacheTTL });
