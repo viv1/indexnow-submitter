@@ -102,7 +102,7 @@ This setup allows you to take full advantage of TypeScript's static typing and t
 ### As a Module
 
 ```typescript
-const IndexNowSubmitter = require()'indexnow-submitter').IndexNowSubmitter; // Supports CommonJS
+const IndexNowSubmitter = require('indexnow-submitter').IndexNowSubmitter; // Supports CommonJS
 // import { IndexNowSubmitter } from 'indexnow-submitter'; // Also supports ES6
 
 
