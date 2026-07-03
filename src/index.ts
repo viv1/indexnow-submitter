@@ -233,6 +233,7 @@ class IndexNowSubmitter {
 
   async notifyDeleted(urls: string[]): Promise<void> {
     logger.info(`Notifying deletion of ${urls.length} URLs`);
+    urls.forEach(url => this.cache.del(url));
     await this.submitUrls(urls);
   }
 

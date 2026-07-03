@@ -260,6 +260,16 @@ describe('IndexNowSubmitter', () => {
       expect(submitter.getAnalytics().successfulSubmissions).toBe(2);
     });
 
+    test('notifyDeleted should bypass the cache for previously submitted URLs', async () => {
+      const url = 'https://test-host.com/page1';
+      mock.onPost('https://test.com/IndexNow').reply(200);
+
+      await submitter.submitSingleUrl(url);
+      await submitter.notifyDeleted([url]);
+
+      expect(mock.history.post.length).toBe(2);
+    });
+
     test('submitFromSitemap with modifiedSince should filter URLs', async () => {
       const sitemapUrl = 'https://test-host.com/sitemap.xml';
       const sitemapContent = `
