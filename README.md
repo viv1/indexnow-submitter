@@ -166,7 +166,7 @@ INDEXNOW_KEY=your-api-key INDEXNOW_HOST=your-website.com npx indexnow-submitter 
 |--------|----------|-------------|---------|
 | engine | -e, --engine | Search engine domain | api.indexnow.org |
 | key | -k, --key | IndexNow API key | (from INDEXNOW_KEY env variable) |
-| host | -h, --host | Your website host | (from INDEXNOW_HOST env variable) |
+| host | -H, --host | Your website host | (from INDEXNOW_HOST env variable) |
 | keyLocation | -p, --key-location | IndexNow API key location URL | https://{host}/{key}.txt |
 | batchSize | -b, --batch-size | Batch size for URL submission (max 10,000) | 100 |
 | rateLimit | -r, --rate-limit | Delay between batches in milliseconds | 1000 |
@@ -242,7 +242,7 @@ All CLI commands support the following options:
 ```
 -e, --engine <engine>                 Search engine domain
 -k, --key <key>                       IndexNow API key
--h, --host <host>                     Your website host
+-H, --host <host>                     Your website host
 -p, --key-location <key-location>     IndexNow API key location URL
 -b, --batch-size <size>               Batch size for URL submission (max 10,000)
 -r, --rate-limit <delay>              Delay between batches in milliseconds

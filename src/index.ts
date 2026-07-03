@@ -247,7 +247,7 @@ async function runCli(): Promise<void> {
     .version('1.4.0')
     .option('-e, --engine <engine>', 'Search engine domain')
     .option('-k, --key <key>', 'IndexNow API key')
-    .option('-h, --host <host>', 'Your website host')
+    .option('-H, --host <host>', 'Your website host')
     .option('-p, --key-location <key-location>', 'IndexNow API key location URL')
     .option('-b, --batch-size <size>', 'Batch size for URL submission, default is 100')
     .option('-r, --rate-limit <delay>', 'Delay between batches in milliseconds, default is 1000')
