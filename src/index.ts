@@ -242,22 +242,29 @@ class IndexNowSubmitter {
   }
 }
 
+function cliConfig(): Partial<Config> {
+  const { cacheTtl, ...opts } = program.opts();
+  return cacheTtl === undefined ? opts : { ...opts, cacheTTL: cacheTtl };
+}
+
 async function runCli(): Promise<void> {
+  const toInt = (value: string) => parseInt(value, 10);
+
   program
     .version('1.4.0')
     .option('-e, --engine <engine>', 'Search engine domain')
     .option('-k, --key <key>', 'IndexNow API key')
     .option('-H, --host <host>', 'Your website host')
     .option('-p, --key-location <key-location>', 'IndexNow API key location URL')
-    .option('-b, --batch-size <size>', 'Batch size for URL submission, default is 100')
-    .option('-r, --rate-limit <delay>', 'Delay between batches in milliseconds, default is 1000')
-    .option('-c, --cache-ttl <ttl>', 'Cache TTL in seconds, default is  (24 hours)');
+    .option('-b, --batch-size <size>', 'Batch size for URL submission, default is 100', toInt)
+    .option('-r, --rate-limit <delay>', 'Delay between batches in milliseconds, default is 1000', toInt)
+    .option('-c, --cache-ttl <ttl>', 'Cache TTL in seconds, default is 86400 (24 hours)', toInt);
 
   program
     .command('submit <url>')
     .description('Submit a single URL')
     .action(async (url: string) => {
-      const submitter = new IndexNowSubmitter(program.opts());
+      const submitter = new IndexNowSubmitter(cliConfig());
       await submitter.submitSingleUrl(url);
       console.log('Analytics:', submitter.getAnalytics());
     });
@@ -266,7 +273,7 @@ async function runCli(): Promise<void> {
     .command('submit-file <file>')
     .description('Submit URLs from a file, with each url in a single line')
     .action(async (file: string) => {
-      const submitter = new IndexNowSubmitter(program.opts());
+      const submitter = new IndexNowSubmitter(cliConfig());
       const content = await fs.readFile(file, 'utf-8');
       const urls = content.split('\n').map(url => url.trim()).filter(url => url !== '');
       await submitter.submitUrls(urls);
@@ -278,7 +285,7 @@ async function runCli(): Promise<void> {
     .option('-d, --modified-since <date>', 'Only submit URLs modified since this date')
     .description('Submit URLs from a sitemap')
     .action(async (url: string, options: { modifiedSince?: string }) => {
-      const submitter = new IndexNowSubmitter(program.opts());
+      const submitter = new IndexNowSubmitter(cliConfig());
       const modifiedSince = options.modifiedSince ? new Date(options.modifiedSince) : undefined;
       await submitter.submitFromSitemap(url, modifiedSince);
       console.log('Analytics:', submitter.getAnalytics());
@@ -288,7 +295,7 @@ async function runCli(): Promise<void> {
     .command('notify-deleted <url>')
     .description('Notify search engines that a URL has been deleted')
     .action(async (url: string) => {
-      const submitter = new IndexNowSubmitter(program.opts());
+      const submitter = new IndexNowSubmitter(cliConfig());
       await submitter.notifyDeleted([url]);
       console.log('Analytics:', submitter.getAnalytics());
     });
@@ -297,7 +304,7 @@ async function runCli(): Promise<void> {
     .command('notify-deleted-file <file>')
     .description('Notify search engines about deleted URLs from a file, one per line')
     .action(async (file: string) => {
-      const submitter = new IndexNowSubmitter(program.opts());
+      const submitter = new IndexNowSubmitter(cliConfig());
       const content = await fs.readFile(file, 'utf-8');
       const urls = content.split('\n').map(url => url.trim()).filter(url => url !== '');
       await submitter.notifyDeleted(urls);
