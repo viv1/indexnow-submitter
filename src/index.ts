@@ -253,7 +253,7 @@ async function runCli(): Promise<void> {
   const toInt = (value: string) => parseInt(value, 10);
 
   program
-    .version('1.4.0')
+    .version('1.5.0')
     .option('-e, --engine <engine>', 'Search engine domain')
     .option('-k, --key <key>', 'IndexNow API key')
     .option('-H, --host <host>', 'Your website host')
