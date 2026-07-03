@@ -268,7 +268,7 @@ async function runCli(): Promise<void> {
     .action(async (file: string) => {
       const submitter = new IndexNowSubmitter(program.opts());
       const content = await fs.readFile(file, 'utf-8');
-      const urls = content.split('\n').filter(url => url.trim() !== '');
+      const urls = content.split('\n').map(url => url.trim()).filter(url => url !== '');
       await submitter.submitUrls(urls);
       console.log('Analytics:', submitter.getAnalytics());
     });
@@ -299,7 +299,7 @@ async function runCli(): Promise<void> {
     .action(async (file: string) => {
       const submitter = new IndexNowSubmitter(program.opts());
       const content = await fs.readFile(file, 'utf-8');
-      const urls = content.split('\n').filter(url => url.trim() !== '');
+      const urls = content.split('\n').map(url => url.trim()).filter(url => url !== '');
       await submitter.notifyDeleted(urls);
       console.log('Analytics:', submitter.getAnalytics());
     });
